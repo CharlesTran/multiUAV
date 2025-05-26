@@ -26,7 +26,7 @@ void processUav(int uavId, std::unordered_map<int, std::vector<Target>>& uavs, s
         //对于每个检测到的目标，将其与现有目标进行比较
         //找到最近的目标比较距离，如果小于阈值则更新，否则就添加到unmatch队列
         const double DIST_THRESHOLD = 0.0005; // 距离阈值，可根据实际需求调整
-        
+        //
         // 对于每个检测到的目标，将其与现有目标进行比较
         // 目前只在当前无人机目标中匹配，跨视角暂不考虑
         std::queue<Target> tmpUnmatch;
