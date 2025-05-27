@@ -33,7 +33,7 @@ void processUav(int uavId, std::unordered_map<int, std::vector<Target>>& uavs, s
         while (!newTargets.empty()) {
             Target newTarget = newTargets.front();
             newTargets.pop();
-
+            //
             std::lock_guard<std::mutex> lock(mtx); // 保证线程安全
             std::vector& targets = uavs[uavId];
 
