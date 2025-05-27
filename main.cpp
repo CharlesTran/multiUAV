@@ -15,7 +15,7 @@ void processUav(int uavId, std::unordered_map<int, std::vector<Target>>& uavs, s
     while (1) {
         // 获取无人机当前目标
         std::queue<Target> newTargets = catchUavTargets(uavId);
-        // 存储距离匹配失败的目标，准备后续匹配
+        // 记录无人机在当前时间段中捕获到的目标，由于时间戳相近，因此使用最短距离匹配是合理的
         // unmatchedTargets中的目标一定满足五个时间戳后才能进行轨迹匹配
         std::vector<Target> unmatchedTargets;
 		// 没有获取到目标时，等待一段时间后重试
@@ -25,70 +25,39 @@ void processUav(int uavId, std::unordered_map<int, std::vector<Target>>& uavs, s
 		}
         //对于每个检测到的目标，将其与现有目标进行比较
         //找到最近的目标比较距离，如果小于阈值则更新，否则就添加到unmatch队列
-        const double DIST_THRESHOLD = 0.0005; // 距离阈值，可根据实际需求调整
-        //
-        // 对于每个检测到的目标，将其与现有目标进行比较
-        // 目前只在当前无人机目标中匹配，跨视角暂不考虑
-        std::queue<Target> tmpUnmatch;
-        while (!newTargets.empty()) {
+        const double DIST_THRESHOLD = 0.0005; // 距离阈值
+
+        while (!newTargets.empty() {
             Target newTarget = newTargets.front();
             newTargets.pop();
-            //
             std::lock_guard<std::mutex> lock(mtx); // 保证线程安全
-            std::vector& targets = uavs[uavId];
-
-            double minDist = std::numeric_limits<double>::max();
-            int minIdx = -1;
-            for (size_t i = 0; i < targets.size(); ++i) {
-                double dist = std::sqrt(
-                    (targets[i].latitude - newTarget.latitude) * (targets[i].latitude - newTarget.latitude) +
-                    (targets[i].longitude - newTarget.longitude) * (targets[i].longitude - newTarget.longitude)
-                );
-                if (dist < minDist) {
-                    minDist = dist;
-                    minIdx = static_cast<int>(i);
-                }
-            }
-
-            if (minIdx != -1 && minDist < DIST_THRESHOLD) {
-                // 距离小于阈值，更新目标
-                updateTarget(targets[minIdx], newTarget.timestamp, newTarget.latitude, newTarget.longitude);
-            } else {
-                // 没有匹配到，加入unmatchedTargets队列
-                tmpUnmatch.push(newTarget);
-            }
-        }
-
-        // 处理未匹配上的目标
-        // 将tmpUnmatch与unmatchedTargets中的目标比较
-        while (!tmpUnmatch.empty()) {
-            Target tmp = tmpUnmatch.front();
-            tmpUnmatch.pop();
-
-            std::lock_guard<std::mutex> lock(mtx); // 保证线程安全
-
             double minDist = std::numeric_limits<double>::max();
             int minIdx = -1;
             for (size_t i = 0; i < unmatchedTargets.size(); ++i) {
                 double dist = std::sqrt(
-                    (targets[i].latitude - newTarget.latitude) * (targets[i].latitude - newTarget.latitude) +
-                    (targets[i].longitude - newTarget.longitude) * (targets[i].longitude - newTarget.longitude)
+                    (unmatchedTargets[i].latitude - newTarget.latitude) * (unmatchedTargets[i].latitude - newTarget.latitude) +
+                    (unmatchedTargets[i].longitude - newTarget.longitude) * (unmatchedTargets[i].longitude - newTarget.longitude)
                 );
                 if (dist < minDist) {
                     minDist = dist;
                     minIdx = static_cast<int>(i);
                 }
             }
-
             if (minIdx != -1 && minDist < DIST_THRESHOLD) {
                 // 距离小于阈值，更新目标
                 updateTarget(unmatchedTargets[minIdx], newTarget.timestamp, newTarget.latitude, newTarget.longitude);
             }
             else {
                 // 没有匹配到，加入unmatchedTargets队列
-                unmatchedTargets.push(tmp);
+                unmatchedTargets.push(newTarget);
             }
         }
+        for (Target& target : unmatchedTargets) {
+            if (target.history.size() == 5) {
+				predictTargets(target);
+            }
+		}
+       
     }
     
     std::lock_guard<std::mutex> lock(mtx); // 保证线程安全
