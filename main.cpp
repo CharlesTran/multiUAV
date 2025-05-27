@@ -37,7 +37,7 @@ void processUav(int uavId, std::unordered_map<int, std::vector<Target>>& uavs, s
                 double dist = std::sqrt(
                     (unmatchedTargets[i].latitude - newTarget.latitude) * (unmatchedTargets[i].latitude - newTarget.latitude) +
                     (unmatchedTargets[i].longitude - newTarget.longitude) * (unmatchedTargets[i].longitude - newTarget.longitude)
-                );
+                );///
                 if (dist < minDist) {
                     minDist = dist;
                     minIdx = static_cast<int>(i);
